@@ -462,6 +462,12 @@ class ProxyInitializationHelpers:
     help="Path to the logging configuration file",
 )
 @click.option(
+    "--setup",
+    is_flag=True,
+    default=False,
+    help="Run the interactive setup wizard to configure providers and generate a config file",
+)
+@click.option(
     "--version",
     "-v",
     default=False,
@@ -584,6 +590,7 @@ def run_server(  # noqa: PLR0915
     num_requests,
     use_queue,
     health,
+    setup,
     version,
     run_gunicorn,
     run_hypercorn,
@@ -596,6 +603,12 @@ def run_server(  # noqa: PLR0915
     keepalive_timeout,
     max_requests_before_restart,
 ):
+    if setup:
+        from litellm.setup_wizard import run_setup_wizard
+
+        run_setup_wizard()
+        return
+
     args = locals()
     if local:
         from proxy_server import (
@@ -822,7 +835,7 @@ def run_server(  # noqa: PLR0915
                         "pool_timeout": db_connection_timeout,
                     }
                     database_url = get_secret("DATABASE_URL", default_value=None)
-                    modified_url = append_query_params(database_url, params)
+                    modified_url = append_query_params(database_url, params)  # type: ignore[arg-type]
                     os.environ["DATABASE_URL"] = modified_url
                 if os.getenv("DIRECT_URL", None) is not None:
                     ### add connection pool + pool timeout args
@@ -880,7 +893,7 @@ def run_server(  # noqa: PLR0915
         # Auto-create PROMETHEUS_MULTIPROC_DIR for multi-worker setups
         ProxyInitializationHelpers._maybe_setup_prometheus_multiproc_dir(
             num_workers=num_workers,
-            litellm_settings=litellm_settings if config else None,
+            litellm_settings=litellm_settings if config else None,  # type: ignore[possibly-unbound]
         )
 
         # --- SEPARATE HEALTH APP LOGIC ---
