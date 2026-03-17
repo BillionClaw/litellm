@@ -26,6 +26,7 @@ from litellm.litellm_core_utils.core_helpers import (
     get_litellm_metadata_from_kwargs,
     get_metadata_variable_name_from_kwargs,
 )
+from litellm.proxy.common_utils.callback_utils import get_model_group_from_request_data
 from litellm.proxy._types import (
     LiteLLM_DeletedVerificationToken,
     LiteLLM_TeamTable,
@@ -1612,6 +1613,8 @@ class PrometheusLogger(CustomLogger):
             model_id = _metadata.get("model_info", {}).get("id") or request_data.get(
                 "model_info", {}
             ).get("id")
+            # Get requested_model from metadata.model_group if available, fallback to request_data["model"]
+            requested_model = get_model_group_from_request_data(request_data) or request_data.get("model", "")
             enum_values = UserAPIKeyLabelValues(
                 end_user=user_api_key_dict.end_user_id,
                 user=user_api_key_dict.user_id,
@@ -1620,7 +1623,7 @@ class PrometheusLogger(CustomLogger):
                 api_key_alias=user_api_key_dict.key_alias,
                 team=user_api_key_dict.team_id,
                 team_alias=user_api_key_dict.team_alias,
-                requested_model=request_data.get("model", ""),
+                requested_model=requested_model,
                 status_code=str(status_code),
                 exception_status=str(status_code),
                 exception_class=self._get_exception_class_name(original_exception),
